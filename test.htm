@@ -3,7 +3,16 @@
 <head>
     <script src="source/entity.js" type="text/javascript"></script>
     <script>
-        Entityjs.CreateDb("database1", 1, function (db) {
+        var Person = {
+            Id,
+            FirstName,
+            LastName,
+            Age
+        }
+
+
+
+        EntityJs.CreateDb("database1", 1, function (db) {
 
             console.log(db);
 
@@ -13,7 +22,7 @@
 
         }, function (db) {
 
-            console.log(db);
+            db.createTable(Person);
 
         });
 
