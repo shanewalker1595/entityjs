@@ -1,12 +1,18 @@
 ;(function () {
     var db = function () {
-        
     },
     table = function () {
 
     };
-    db.prototype.createTable = function (tableName) {
-
+    db.prototype.createTable = function (tableName, schema, drop) {
+        if (drop) {
+            this.originalDb.deleteObjectStore(tableName);
+        }
+        var store = this.originalDb.createObjectStore(tableName);
+        for (var prop in schema) {
+            store.createIndex(prop, prop, schema[prop]);
+        }
+        return _createEntityTable.call(this, store);
     };
     db.prototype.deleteTable = function (tableName) {
 
@@ -36,20 +42,28 @@
         newDb.originalDb = indexDb;
         return newDb;
     }
+    // Creates an EntityJs table from an IIndexedDbObjectStore object.
+    function _createEntityTable(objectStore) {
+        var newTable = new table();
+        this[objectStore.name] = newTable;
+        newTable.originalStore = objectStore;
+    }
 
     window.EntityJs = {
-        CreateDb: function (databaseName, version, success, fail, update) {
-            var request = window.indexedDB.open(databaseName, version);
+        CreateDb: function (databaseName, version, success, fail, upgrade) {
+            var request = window.indexedDB.open(databaseName, version),
+                upgraded = false,
+                newDb;
             request.onsuccess = function (e) {
-                success(_createDb(request.result));
+                upgraded ? success(newDb) : success(_createDb(request.result));
             }
             request.onerror = function (e) {
                 fail(e);
             }
             request.onupgradeneeded = function (e) {
-                var db = _createDb(request.result);
-                upgrade(db);
-                success(db);
+                upgraded = true;
+                newDb = _createDb(request.result);
+                upgrade(newDb);
             }
         }
     }

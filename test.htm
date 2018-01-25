@@ -3,16 +3,26 @@
 <head>
     <script src="source/entity.js" type="text/javascript"></script>
     <script>
-        var Person = {
-            Id,
-            FirstName,
-            LastName,
-            Age
+        var PersonSchema = {
+            Id: {
+                Key: true,
+                Autonumber: true,
+                Unique: true,
+            },
+            FirstName: {
+                Unique: false
+            },
+            LastName: {
+                Unique: false
+            },
+            Age: {
+                Unique: false
+            },
         }
 
 
 
-        EntityJs.CreateDb("database1", 1, function (db) {
+        EntityJs.CreateDb("database1", 7, function (db) {
 
             console.log(db);
 
@@ -22,7 +32,7 @@
 
         }, function (db) {
 
-            db.createTable(Person);
+            db.createTable("Persons", PersonSchema, true);
 
         });
 
