@@ -4,28 +4,53 @@
     <script src="source/entity.js" type="text/javascript"></script>
     <script>
         var PersonSchema = {
-            Id: {
-                Key: true,
-                Autonumber: true,
-                Unique: true,
+            Key: {
+                keyPath: "Id",
+                autoIncrement: true,
+                unique: true,
             },
             FirstName: {
-                Unique: false
+                unique: false
             },
             LastName: {
-                Unique: false
+                unique: false
             },
             Age: {
-                Unique: false
+                unique: false
             },
         }
 
 
 
-        EntityJs.CreateDb("database1", 7, function (db) {
+        EntityJs.CreateDb("database1", 2, function (db) {
 
-            console.log(db);
+            // Add a person to the database.
+            db.Persons.add({
+                FirstName: "Shane",
+                LastName: "Walker",
+                Age: 24
+            }, function (personId) {
+                console.log(personId); // 1, Shane's person id.
 
+                // Retrieve a person from the database.
+                db.Persons.getById(1, function (p) {
+                    console.log(p); // Shane.
+
+                    // Update a person.
+                    p.FirstName = "John";
+                    db.Persons.update(p);
+
+                    // Retrieve all persons names.
+                    db.Persons.select(x => x.FirstName, function (names) {
+                        console.log(names);
+                    });
+
+                    // Retrieve persons who have an age.
+                    db.Persons.where(x => typeof x.Age != "undefined", function (agedPeople) {
+                        console.log(agedPeople);
+                    });
+                });
+            });
         }, function (error) {
 
             console.log(error);
@@ -34,7 +59,7 @@
 
             db.createTable("Persons", PersonSchema, true);
 
-        });
+        }, true);
 
     </script>
 </head>

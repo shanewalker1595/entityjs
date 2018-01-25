@@ -1,69 +1,123 @@
-;(function () {
-    var db = function () {
+; (function () {
+    var Database = function () {
     },
-    table = function () {
-
-    };
-    db.prototype.createTable = function (tableName, schema, drop) {
+        Table = function (tableName, database) {
+            this.name = tableName;
+            this.database = database;
+        };
+    Database.prototype.createTable = function (tableName, schema, drop) {
         if (drop) {
-            this.originalDb.deleteObjectStore(tableName);
+            try {
+                this.deleteTable(tableName);
+            } catch (e) {
+
+            }
         }
-        var store = this.originalDb.createObjectStore(tableName);
+        var store = this.originalDb.createObjectStore(tableName, schema.Key);
         for (var prop in schema) {
-            store.createIndex(prop, prop, schema[prop]);
+            if (prop != "Key") {
+                store.createIndex(prop, prop, schema[prop]);
+            }
         }
         return _createEntityTable.call(this, store);
     };
-    db.prototype.deleteTable = function (tableName) {
+    Database.prototype.deleteTable = function (tableName) {
+        this.originalDb.deleteObjectStore(tableName);
+    };
 
-    };
-    table.prototype.getById = function (id) {
-
-    };
-    table.prototype.select = function (selectorFn) {
-        
-    };
-    table.prototype.removeById = function (id) {
-
-    };
-    table.prototype.remove = function (entity) {
-
-    };
-    table.prototype.update = function (entity) {
-
-    };
-    table.prototype.where = function (whereFn) {
-        
+    // --------------- Create
+    Table.prototype.add = function (entity, callback) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).add(entity);
+        request.onsuccess = function (evt) {
+            callback(evt.target.result);
+        }
     }
+    // -------------- Read
+    Table.prototype.getById = function (id, callback) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).get(id);
+        request.onsuccess = function (evt) {
+            callback(evt.target.result);
+        }
+    };
+    Table.prototype.select = function (selectorFn, callback) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).getAll();
+        request.onsuccess = function (evt) {
+            var allItems = evt.target.result;
+            var selectedItems = [];
+            for (var i = 0; i < allItems.length; i++) {
+                selectedItems.push(selectorFn.call(this, allItems[i]));
+            }
+            callback(selectedItems);
+        }
+    };
+    Table.prototype.where = function (whereFn, callback) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).getAll();
+        request.onsuccess = function (evt) {
+            var allItems = evt.target.result;
+            var selectedItems = [];
+            for (var i = 0; i < allItems.length; i++) {
+                if (whereFn.call(this, allItems[i]) === true) {
+                    selectedItems.push(allItems[i]);
+                }
+            }
+            callback(selectedItems);
+        }
+    }
+    // -------------- Update
+    Table.prototype.update = function (entity, callback) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).put(entity);
+        if (typeof callback === "function") {
+            request.onsuccess = function (evt) {
+                callback(evt.target.result);
+            }
+        }
+    };
+    // -------------- Delete
+    Table.prototype.removeById = function (id) {
+        var request = this.database.originalDb.transaction(this.name, "readwrite").objectStore(this.name).delete(id);
+        request.onsuccess = function (evt) {
+            callback(evt.target.result);
+        }
+    };
+    Table.prototype.remove = function (entity) {
+        this.removeById(entity.Id);
+    };
 
-    // Creates an EntityJs db from and IIndexedDb object.
+
+    // Creates an EntityJs Database from and IIndexedDb object.
     function _createDb(indexDb) {
-        var newDb = new db();
+        var newDb = new Database();
         newDb.originalDb = indexDb;
+        for (var i = 0; i < newDb.originalDb.objectStoreNames.length; i++) {
+            var tblName = newDb.originalDb.objectStoreNames[i],
+                objectStore = indexDb.transaction(tblName, "readonly").objectStore(tblName);
+            newDb[tblName] = _createEntityTable(objectStore, newDb);
+        }
         return newDb;
     }
-    // Creates an EntityJs table from an IIndexedDbObjectStore object.
-    function _createEntityTable(objectStore) {
-        var newTable = new table();
+    // Creates an EntityJs Table from an IIndexedDbObjectStore object.
+    function _createEntityTable(objectStore, database) {
+        var newTable = new Table(objectStore.name, database);
         this[objectStore.name] = newTable;
-        newTable.originalStore = objectStore;
+        return newTable;
     }
 
     window.EntityJs = {
-        CreateDb: function (databaseName, version, success, fail, upgrade) {
-            var request = window.indexedDB.open(databaseName, version),
-                upgraded = false,
-                newDb;
+        CreateDb: function (databaseName, version, success, fail, upgrade, drop) {
+            if (drop) {
+                window.indexedDB.deleteDatabase(databaseName);
+            }
+            var request = window.indexedDB.open(databaseName, version);
             request.onsuccess = function (e) {
-                upgraded ? success(newDb) : success(_createDb(request.result));
+                success(_createDb(e.target.result));
             }
             request.onerror = function (e) {
                 fail(e);
             }
             request.onupgradeneeded = function (e) {
-                upgraded = true;
-                newDb = _createDb(request.result);
-                upgrade(newDb);
+                db = new Database();
+                db.originalDb = e.target.result
+                upgrade(db);
             }
         }
     }
