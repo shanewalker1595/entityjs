@@ -5,7 +5,7 @@ A wrapper for IndexedDb that provides C# Entity Framework Style operations.
 ```javascript
 // Define a Schema
 var personSchema = {
-   //Schema limited for brevity, refer to Creating a Schema. 
+   //Schema omited for brevity, refer to Creating a Schema. 
 }
 // Define a database.
 EntityJs.CreateDb("database1", 1, function (db) { 
@@ -35,4 +35,18 @@ db.Persons.where(x => x.Age > 100, function (oldPeople) {
 ```javascript
 db.Persons.select(x => x.Age, function (ages) {
     console.log(ages) // Gets the age of all people.
-})
+});
+```
+
+## Create a database: Define a Schema.
+```javascript
+var tableSchema = {
+    Key: { // Holds information regarding the table key. 
+        keyPath: "id",
+        autoIncrement: true|false,
+        unique: true|false
+    },
+    Column1: { // Exlude the key column here.
+        unique: true|false,
+    }
+}
